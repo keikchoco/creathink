@@ -13,6 +13,7 @@ export interface TestimonialDocument extends Document {
   status: ContentStatus
   createdAt: Date
   updatedAt: Date
+  userFilled?: boolean
 }
 
 const testimonialSchema = new Schema<TestimonialDocument>(

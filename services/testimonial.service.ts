@@ -1,11 +1,15 @@
 import "server-only"
 import { Types } from "mongoose"
 
-import { testimonialRepository, type TestimonialFilter } from "@/repositories/testimonial.repository"
+import {
+  testimonialRepository,
+  type TestimonialFilter,
+} from "@/repositories/testimonial.repository"
 import { NotFoundError } from "@/lib/errors"
 import type { TestimonialDocument } from "@/models/Testimonial"
 import type { ListQueryOptions, PaginatedResult } from "@/types/api"
 import type { InferredTestimonialInput } from "@/schemas/testimonial.schema"
+import { projectRepository } from "@/repositories/project.repository"
 
 function toRepositoryInput(input: InferredTestimonialInput) {
   return {
@@ -16,7 +20,7 @@ function toRepositoryInput(input: InferredTestimonialInput) {
 
 async function list(
   filter: TestimonialFilter,
-  options?: ListQueryOptions,
+  options?: ListQueryOptions
 ): Promise<PaginatedResult<TestimonialDocument>> {
   return testimonialRepository.findAll(filter, options)
 }
@@ -27,15 +31,23 @@ async function getById(id: string): Promise<TestimonialDocument> {
   return testimonial
 }
 
-async function create(input: InferredTestimonialInput): Promise<TestimonialDocument> {
-  return testimonialRepository.create({ ...toRepositoryInput(input), status: "draft" })
+async function create(
+  input: InferredTestimonialInput
+): Promise<TestimonialDocument> {
+  return testimonialRepository.create({
+    ...toRepositoryInput(input),
+    status: "draft",
+  })
 }
 
 async function update(
   id: string,
-  input: InferredTestimonialInput,
+  input: InferredTestimonialInput
 ): Promise<TestimonialDocument> {
-  const updated = await testimonialRepository.update(id, toRepositoryInput(input))
+  const updated = await testimonialRepository.update(
+    id,
+    toRepositoryInput(input)
+  )
   if (!updated) throw new NotFoundError("Testimonial not found")
   return updated
 }
@@ -57,4 +69,12 @@ async function remove(id: string): Promise<void> {
   await testimonialRepository.hardDelete(id)
 }
 
-export const testimonialService = { list, getById, create, update, publish, archive, remove }
+export const testimonialService = {
+  list,
+  getById,
+  create,
+  update,
+  publish,
+  archive,
+  remove,
+}

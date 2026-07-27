@@ -6,6 +6,7 @@ import { ErrorState } from "@/components/shared/error-state"
 import { EmptyState } from "@/components/shared/empty-state"
 import { TestimonialsTable, type TestimonialRow } from "@/components/admin/testimonials-table"
 import { NewTestimonialButton } from "@/components/admin/new-testimonial-button"
+import { Button } from "@/components/ui/button";
 
 interface AdminTestimonialsPageProps {
   searchParams: Promise<Record<string, string | undefined>>
@@ -54,6 +55,7 @@ export default async function AdminTestimonialsPage({ searchParams }: AdminTesti
         rating: item.rating,
         projectId: item.projectId ? String(item.projectId) : null,
         order: item.order,
+        userFilled: item.userFilled ?? false,
       },
     }))
     total = result.total
@@ -71,7 +73,7 @@ export default async function AdminTestimonialsPage({ searchParams }: AdminTesti
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-2">
         <Typography as="h1" variant="h1">
           Testimonials
         </Typography>

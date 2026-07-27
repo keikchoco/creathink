@@ -122,7 +122,7 @@ function ServiceForm({ serviceId, defaultValues, onSuccess }: ServiceFormProps) 
 
       <form.Field name="order">
         {(field) => (
-          <FormField label="Order" htmlFor="order">
+          <FormField label="Order" htmlFor="order" className="hidden">
             <Input
               id="order"
               type="number"
