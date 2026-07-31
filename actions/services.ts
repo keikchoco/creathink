@@ -8,6 +8,7 @@ import { serviceRepository } from "@/repositories/service.repository"
 import { createAuditLog } from "@/lib/audit-log"
 import { ValidationError, formatZodError } from "@/lib/errors"
 import { successResponse, errorResponse } from "@/lib/api-response"
+import { applyReorder } from "@/lib/reorder"
 import { serviceSchema } from "@/schemas/service.schema"
 import type { ApiResponse } from "@/types/api"
 
@@ -108,6 +109,38 @@ export async function deleteServiceAction(id: string): Promise<ApiResponse<null>
     revalidatePath("/admin/services")
     revalidatePath("/")
     revalidatePath("/services")
+    return successResponse(null)
+  } catch (error) {
+    return errorResponse(error)
+  }
+}
+
+export async function reorderServicesAction(ids: unknown): Promise<ApiResponse<null>> {
+  try {
+    const admin = await requirePermission("services", "edit")
+
+    if (
+      !Array.isArray(ids) ||
+      ids.length === 0 ||
+      ids.some((id) => typeof id !== "string")
+    ) {
+      throw new ValidationError("Invalid order")
+    }
+
+    await applyReorder(serviceRepository, ids as string[])
+
+    await createAuditLog({
+      userId: admin.userId,
+      action: "UPDATE",
+      resource: "services",
+      resourceId: "reorder",
+      newValue: { ids },
+    })
+
+    revalidatePath("/admin/services")
+    revalidatePath("/")
+    revalidatePath("/services")
+
     return successResponse(null)
   } catch (error) {
     return errorResponse(error)

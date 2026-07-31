@@ -98,7 +98,7 @@ export default async function HomePage() {
         
       </Suspense>
 
-      {/* <TestimonialsSection
+      <TestimonialsSection
         index="05"
         testimonials={testimonialsResult.items.map((testimonial) => ({
           _id: String(testimonial._id),
@@ -111,7 +111,7 @@ export default async function HomePage() {
         }))}
         totalCount={testimonialsResult.total}
         viewAllHref={testimonialsResult.total > 6 ? "/testimonials" : undefined}
-      /> */}
+      />
 
       <CtaSection />
     </>

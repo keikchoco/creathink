@@ -45,7 +45,18 @@ export default async function AdminTestimonialsPage({ searchParams }: AdminTesti
       status: item.status,
       order: item.order,
       rating: item.rating,
+      ratings: item.ratings
+        ? {
+            quality: item.ratings.quality,
+            communication: item.ratings.communication,
+            valueForMoney: item.ratings.valueForMoney,
+          }
+        : null,
       createdAt: new Date(item.createdAt).toISOString(),
+      image: item.image ?? "",
+      imageHidden: item.imageHidden ?? false,
+      linkToken: item.linkToken ?? null,
+      linkStatus: item.linkStatus ?? null,
       defaultValues: {
         clientName: item.clientName,
         position: item.position,
@@ -55,7 +66,6 @@ export default async function AdminTestimonialsPage({ searchParams }: AdminTesti
         rating: item.rating,
         projectId: item.projectId ? String(item.projectId) : null,
         order: item.order,
-        userFilled: item.userFilled ?? false,
       },
     }))
     total = result.total

@@ -3,13 +3,14 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowUpIcon, ArrowDownIcon } from "lucide-react"
+import { LinkIcon, EyeIcon, EyeOffIcon } from "lucide-react"
 
 import {
   publishTestimonialAction,
   archiveTestimonialAction,
   deleteTestimonialAction,
-  reorderTestimonialAction,
+  reorderTestimonialsAction,
+  setTestimonialImageHiddenAction,
 } from "@/actions/testimonials"
 import type { InferredTestimonialInput } from "@/schemas/testimonial.schema"
 import { DataTable, type DataTableColumn } from "@/components/admin/data-table"
@@ -26,7 +27,16 @@ export interface TestimonialRow {
   status: "draft" | "published" | "archived"
   order: number
   rating: number
+  ratings: {
+    quality: number
+    communication: number
+    valueForMoney: number
+  } | null
   createdAt: string
+  image: string
+  imageHidden: boolean
+  linkToken: string | null
+  linkStatus: "pending" | "submitted" | null
   defaultValues: InferredTestimonialInput
 }
 
@@ -58,13 +68,26 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
     router.refresh()
   }
 
-  async function handleReorder(id: string, direction: "up" | "down") {
-    const response = await reorderTestimonialAction(id, direction)
+  async function handleReorder(orderedIds: string[]) {
+    const response = await reorderTestimonialsAction(orderedIds)
     if (!response.success) {
       toast.error(response.error.message)
+      router.refresh()
       return
     }
+    toast.success("Order updated")
     router.refresh()
+  }
+
+  async function handleCopyLink(row: TestimonialRow) {
+    if (!row.linkToken) return
+    const link = `${window.location.origin}/testimonials/create?token=${row.linkToken}`
+    try {
+      await navigator.clipboard.writeText(link)
+      toast.success("Testimonial link copied to clipboard")
+    } catch {
+      toast.error("Unable to copy the link. Please try again.")
+    }
   }
 
   async function handleDeleteConfirm() {
@@ -91,12 +114,28 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
           className="font-medium hover:underline"
           onClick={() => setEditingRow(row)}
         >
-          {row.clientName}
+          {row.clientName || (
+            <span className="text-muted-foreground italic">Awaiting client</span>
+          )}
         </button>
       ),
     },
     { key: "company", label: "Company", render: (row) => row.company },
-    { key: "rating", label: "Rating", render: (row) => <StarRating rating={row.rating} /> },
+    {
+      key: "rating",
+      label: "Rating",
+      render: (row) => (
+        <div className="flex flex-col gap-0.5">
+          <StarRating rating={row.rating} variant="value" />
+          {row.ratings && (
+            <span className="text-xs text-muted-foreground">
+              Quality {row.ratings.quality} · Comm. {row.ratings.communication} · Value{" "}
+              {row.ratings.valueForMoney}
+            </span>
+          )}
+        </div>
+      ),
+    },
     { key: "status", label: "Status", render: (row) => <span className="capitalize">{row.status}</span> },
     { key: "order", label: "Order", render: (row) => row.order },
   ]
@@ -112,15 +151,36 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
         basePath="/admin/testimonials"
         getRowId={(row) => row.id}
         searchPlaceholder="Search testimonials..."
+        onReorder={handleReorder}
         rowActions={(row) => (
           <>
-            <Button variant="ghost" size="icon-sm" onClick={() => handleReorder(row.id, "up")}>
-              <ArrowUpIcon />
-            </Button>
-            <Button variant="ghost" size="icon-sm" onClick={() => handleReorder(row.id, "down")}>
-              <ArrowDownIcon />
-            </Button>
-            {row.status !== "published" && (
+            {row.image && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  runAction(
+                    (id) => setTestimonialImageHiddenAction(id, !row.imageHidden),
+                    row.id,
+                    row.imageHidden ? "Photo is now visible" : "Photo is now hidden",
+                  )
+                }
+              >
+                {row.imageHidden ? <EyeIcon /> : <EyeOffIcon />}
+                {row.imageHidden ? "Show photo" : "Hide photo"}
+              </Button>
+            )}
+            {row.linkStatus === "pending" && row.linkToken && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCopyLink(row)}
+              >
+                <LinkIcon />
+                Copy link
+              </Button>
+            )}
+            {row.status !== "published" && row.linkStatus !== "pending" && (
               <Button
                 variant="outline"
                 size="sm"

@@ -17,11 +17,13 @@ function TestimonialSpotlightCard({ testimonial }: TestimonialSpotlightCardProps
       />
       <div>
         <p className="text-base font-semibold text-foreground">{testimonial.clientName}</p>
-        <p className="text-xs text-muted-foreground">
-          {testimonial.position}, {testimonial.company}
-        </p>
+        {(testimonial.position || testimonial.company) && (
+          <p className="text-xs text-muted-foreground">
+            {[testimonial.position, testimonial.company].filter(Boolean).join(", ")}
+          </p>
+        )}
       </div>
-      <StarRating rating={testimonial.rating} />
+      <StarRating rating={testimonial.rating} showValue />
       <p className="text-sm leading-relaxed text-muted-foreground">&quot;{testimonial.review}&quot;</p>
     </div>
   )

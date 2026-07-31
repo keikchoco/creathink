@@ -30,7 +30,7 @@ export default async function TestimonialsPage() {
         clientName: testimonial.clientName,
         position: testimonial.position,
         company: testimonial.company,
-        image: testimonial.image,
+        image: testimonial.imageHidden ? "" : testimonial.image,
         review: testimonial.review,
         rating: testimonial.rating,
       }))}

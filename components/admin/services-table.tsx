@@ -3,13 +3,11 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowUpIcon, ArrowDownIcon } from "lucide-react"
-
 import {
   publishServiceAction,
   archiveServiceAction,
   deleteServiceAction,
-  reorderServiceAction,
+  reorderServicesAction,
 } from "@/actions/services"
 import type { InferredServiceInput } from "@/schemas/service.schema"
 import { DataTable, type DataTableColumn } from "@/components/admin/data-table"
@@ -54,12 +52,14 @@ function ServicesTable({ rows, total, page, limit }: ServicesTableProps) {
     router.refresh()
   }
 
-  async function handleReorder(id: string, direction: "up" | "down") {
-    const response = await reorderServiceAction(id, direction)
+  async function handleReorder(orderedIds: string[]) {
+    const response = await reorderServicesAction(orderedIds)
     if (!response.success) {
       toast.error(response.error.message)
+      router.refresh()
       return
     }
+    toast.success("Order updated")
     router.refresh()
   }
 
@@ -111,14 +111,9 @@ function ServicesTable({ rows, total, page, limit }: ServicesTableProps) {
         basePath="/admin/services"
         getRowId={(row) => row.id}
         searchPlaceholder="Search services..."
+        onReorder={handleReorder}
         rowActions={(row) => (
           <>
-            <Button variant="ghost" size="icon-sm" onClick={() => handleReorder(row.id, "up")}>
-              <ArrowUpIcon />
-            </Button>
-            <Button variant="ghost" size="icon-sm" onClick={() => handleReorder(row.id, "down")}>
-              <ArrowDownIcon />
-            </Button>
             {row.status !== "published" && (
               <Button
                 variant="outline"

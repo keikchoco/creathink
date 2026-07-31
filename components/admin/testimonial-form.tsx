@@ -8,6 +8,7 @@ import { StarIcon } from "lucide-react"
 import {
   createTestimonialAction,
   updateTestimonialAction,
+  generateTestimonialLinkAction,
 } from "@/actions/testimonials"
 import type { InferredTestimonialInput } from "@/schemas/testimonial.schema"
 import { Input } from "@/components/ui/input"
@@ -19,14 +20,14 @@ import {
   ComboboxList,
   ComboboxItem,
   ComboboxEmpty,
-  ComboboxLabel,
 } from "@/components/ui/combobox"
 import { FormField } from "@/components/forms/form-field"
 import { FormError } from "@/components/forms/form-error"
 import { SubmitButton } from "@/components/forms/submit-button"
 import { MediaPicker } from "@/components/admin/media-picker"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
+
+const REVIEW_MAX_LENGTH = 120
 
 const emptyTestimonial: InferredTestimonialInput = {
   clientName: "",
@@ -37,7 +38,6 @@ const emptyTestimonial: InferredTestimonialInput = {
   rating: 5,
   projectId: null,
   order: 0,
-  userFilled: false,
 }
 
 interface TestimonialFormProps {
@@ -54,46 +54,17 @@ function TestimonialForm({
   onSuccess,
 }: TestimonialFormProps) {
   const [formError, setFormError] = React.useState<string | null>(null)
-  const [isGeneratingLink, setIsGeneratingLink] = useState(false)
+  const [isGeneratingLink, setIsGeneratingLink] = React.useState(false)
+
+  const projectItems = React.useMemo(
+    () => [{ id: "", title: "None" }, ...projectOptions],
+    [projectOptions]
+  )
 
   const form = useForm({
     defaultValues: defaultValues ?? emptyTestimonial,
     onSubmit: async ({ value }) => {
       setFormError(null)
-
-      if (isGeneratingLink && !value.projectId) {
-        setFormError(
-          "A related project is required when generating a testimonial link."
-        )
-        setIsGeneratingLink(false)
-        return
-      }
-
-      if (isGeneratingLink) {
-        const response = await createTestimonialAction({
-          ...value,
-          status: "draft",
-          userFilled: true,
-        })
-
-        if (!response.success) {
-          setFormError(response.error.message)
-          setIsGeneratingLink(false)
-          return
-        }
-
-        toast.success("Testimonial link generated with id: " + response.data.id)
-
-        if(navigator.clipboard) {
-          navigator.clipboard.writeText(
-            `${window.location.origin}/testimonials/create?id=${response.data.id}`
-          )
-          toast.success("Testimonial link copied to clipboard")
-        }
-        setIsGeneratingLink(false)
-        onSuccess?.()
-        return
-      }
 
       const response = testimonialId
         ? await updateTestimonialAction(testimonialId, value)
@@ -113,10 +84,39 @@ function TestimonialForm({
 
   async function generateTestimonialLink() {
     setFormError(null)
-    setIsGeneratingLink(true)
 
-    form.handleSubmit()
+    const projectId = form.getFieldValue("projectId")
+    if (!projectId) {
+      setFormError(
+        "Select a related project before generating a testimonial link."
+      )
+      return
+    }
+
+    setIsGeneratingLink(true)
+    try {
+      const response = await generateTestimonialLinkAction(projectId)
+
+      if (!response.success) {
+        setFormError(response.error.message)
+        return
+      }
+
+      const link = `${window.location.origin}/testimonials/create?token=${response.data.token}`
+
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(link)
+        toast.success("Testimonial link copied to clipboard")
+      } else {
+        toast.success(`Testimonial link: ${link}`)
+      }
+
+      onSuccess?.()
+    } finally {
+      setIsGeneratingLink(false)
+    }
   }
+
   return (
     <form
       className="flex flex-col gap-4"
@@ -128,11 +128,7 @@ function TestimonialForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <form.Field name="clientName">
           {(field) => (
-            <FormField
-              label="Client name"
-              htmlFor="clientName"
-              required={isGeneratingLink ? false : true}
-            >
+            <FormField label="Client name" htmlFor="clientName" required>
               <Input
                 id="clientName"
                 value={field.state.value}
@@ -144,11 +140,7 @@ function TestimonialForm({
 
         <form.Field name="position">
           {(field) => (
-            <FormField
-              label="Position"
-              htmlFor="position"
-              required={isGeneratingLink ? false : true}
-            >
+            <FormField label="Position" htmlFor="position" description="Optional">
               <Input
                 id="position"
                 value={field.state.value}
@@ -163,7 +155,7 @@ function TestimonialForm({
             <FormField
               label="Company"
               htmlFor="company"
-              required={isGeneratingLink ? false : true}
+              description="Optional"
               className="sm:col-span-2"
             >
               <Input
@@ -208,28 +200,26 @@ function TestimonialForm({
 
       <form.Field name="review">
         {(field) => (
-          <FormField
-            label="Review"
-            htmlFor="review"
-            required={isGeneratingLink ? false : true}
-          >
+          <FormField label="Review" htmlFor="review" required>
             <Textarea
               id="review"
               value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
+              onChange={(event) =>
+                field.handleChange(event.target.value.slice(0, REVIEW_MAX_LENGTH))
+              }
               rows={4}
+              maxLength={REVIEW_MAX_LENGTH}
             />
+            <span className="self-end text-xs text-muted-foreground">
+              {field.state.value.length}/{REVIEW_MAX_LENGTH}
+            </span>
           </FormField>
         )}
       </form.Field>
 
       <form.Field name="rating">
         {(field) => (
-          <FormField
-            label="Rating"
-            htmlFor="rating"
-            required={isGeneratingLink ? false : true}
-          >
+          <FormField label="Rating" htmlFor="rating" required>
             <div className="flex items-center gap-1" id="rating">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button
@@ -260,20 +250,23 @@ function TestimonialForm({
           <FormField
             label="Related project"
             htmlFor="projectId"
-            description="Optional"
-            required={isGeneratingLink ? true : false}
+            description="Optional — required only when generating a testimonial link"
           >
             <Combobox
-              items={[{ id: "", title: "None" }, ...projectOptions]}
-              value={field.state.value ?? ""}
-              onValueChange={(value) => field.handleChange(value || null)}
+              items={projectItems}
+              itemToStringLabel={(item) => item?.title ?? ""}
+              value={
+                projectItems.find((item) => item.id === field.state.value) ??
+                null
+              }
+              onValueChange={(item) => field.handleChange(item?.id || null)}
             >
               <ComboboxInput placeholder="Search projects..." id="projectId" />
               <ComboboxContent>
                 <ComboboxEmpty>No projects found.</ComboboxEmpty>
                 <ComboboxList>
-                  {(project) => (
-                    <ComboboxItem key={project.id} value={project.id}>
+                  {(project: { id: string; title: string }) => (
+                    <ComboboxItem key={project.id} value={project}>
                       {project.title}
                     </ComboboxItem>
                   )}
@@ -298,12 +291,11 @@ function TestimonialForm({
             </SubmitButton>
             {!testimonialId && (
               <SubmitButton
+                type="button"
                 className="self-start"
-                onClick={(e) => {
-                  e.preventDefault()
-                  generateTestimonialLink()
-                }}
-                disabled={isGeneratingLink}
+                isSubmitting={isGeneratingLink}
+                submittingLabel="Generating..."
+                onClick={() => generateTestimonialLink()}
               >
                 Generate Testimonial Link
               </SubmitButton>

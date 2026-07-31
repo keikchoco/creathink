@@ -65,7 +65,7 @@ function TestimonialsSection({ testimonials, index, totalCount, viewAllHref }: T
                     <div className="flex h-full flex-col gap-6 border-t border-border pt-6">
                       <div className="flex items-center justify-between">
                         <QuoteIcon className="size-6 text-primary" />
-                        <StarRating rating={testimonial.rating} />
+                        <StarRating rating={testimonial.rating} variant="value" />
                       </div>
                       <p className="text-lg leading-relaxed text-foreground">
                         {testimonial.review}
@@ -76,9 +76,13 @@ function TestimonialsSection({ testimonials, index, totalCount, viewAllHref }: T
                           <p className="text-sm font-medium text-foreground">
                             {testimonial.clientName}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            {testimonial.position}, {testimonial.company}
-                          </p>
+                          {(testimonial.position || testimonial.company) && (
+                            <p className="text-xs text-muted-foreground">
+                              {[testimonial.position, testimonial.company]
+                                .filter(Boolean)
+                                .join(", ")}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
