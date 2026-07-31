@@ -92,7 +92,7 @@ function ServicesTable({ rows, total, page, limit }: ServicesTableProps) {
       ),
     },
     { key: "status", label: "Status", render: (row) => <span className="capitalize">{row.status}</span> },
-    { key: "order", label: "Order", render: (row) => row.order },
+    // { key: "order", label: "Order", render: (row) => row.order },
     {
       key: "createdAt",
       label: "Created",

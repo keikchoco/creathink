@@ -107,7 +107,7 @@ function ProjectsTable({ rows, total, page, limit }: ProjectsTableProps) {
       ),
     },
     { key: "featured", label: "Featured", render: (row) => (row.featured ? "Yes" : "—") },
-    { key: "order", label: "Order", render: (row) => row.order },
+    // { key: "order", label: "Order", render: (row) => row.order },
     {
       key: "createdAt",
       label: "Created",

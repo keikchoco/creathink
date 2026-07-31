@@ -111,6 +111,31 @@ export async function updateAdminMetadata(
   })
 }
 
+export async function getUserNames(
+  userIds: string[],
+): Promise<Record<string, string>> {
+  const uniqueIds = [...new Set(userIds)].filter(Boolean)
+  if (uniqueIds.length === 0) return {}
+
+  try {
+    const client = await clerkClient()
+    const { data } = await client.users.getUserList({
+      userId: uniqueIds,
+      limit: uniqueIds.length,
+    })
+
+    const names: Record<string, string> = {}
+    for (const user of data) {
+      const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ")
+      const email = user.emailAddresses[0]?.emailAddress
+      names[user.id] = fullName || email || user.id
+    }
+    return names
+  } catch {
+    return {}
+  }
+}
+
 export async function getAdminMetadata(userId: string): Promise<ClerkPublicMetadata> {
   const client = await clerkClient()
   const user = await client.users.getUser(userId)

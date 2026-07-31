@@ -1,5 +1,6 @@
 import { requirePermission } from "@/lib/permissions"
 import { listAuditLogs } from "@/lib/audit-log"
+import { getUserNames } from "@/lib/admin-users"
 import { Typography } from "@/components/shared/typography"
 import { ErrorState } from "@/components/shared/error-state"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -32,9 +33,12 @@ export default async function AdminAuditLogsPage({ searchParams }: AdminAuditLog
   try {
     const result = await listAuditLogs({}, { page, limit, search: params.q })
 
+    const userNames = await getUserNames(result.items.map((item) => item.userId))
+
     rows = result.items.map((item) => ({
       id: String(item._id),
       userId: item.userId,
+      userName: userNames[item.userId] ?? "",
       action: item.action,
       resource: item.resource,
       resourceId: item.resourceId,

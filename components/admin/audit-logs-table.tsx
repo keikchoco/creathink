@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from "@/components/admin/data-table"
 export interface AuditLogRow {
   id: string
   userId: string
+  userName: string
   action: string
   resource: string
   resourceId: string
@@ -35,7 +36,12 @@ function AuditLogsTable({ rows, total, page, limit }: AuditLogsTableProps) {
     {
       key: "userId",
       label: "Admin",
-      render: (row) => <code className="text-xs text-muted-foreground">{row.userId}</code>,
+      render: (row) =>
+        row.userName ? (
+          <span title={row.userId}>{row.userName}</span>
+        ) : (
+          <code className="text-xs text-muted-foreground">{row.userId}</code>
+        ),
     },
   ]
 

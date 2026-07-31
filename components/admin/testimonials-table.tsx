@@ -137,7 +137,7 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
       ),
     },
     { key: "status", label: "Status", render: (row) => <span className="capitalize">{row.status}</span> },
-    { key: "order", label: "Order", render: (row) => row.order },
+    // { key: "order", label: "Order", render: (row) => row.order },
   ]
 
   return (
