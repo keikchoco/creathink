@@ -9,6 +9,7 @@ export const RESOURCES = [
   "media",
   "messages",
   "inquiries",
+  "invoices",
   "seo",
   "settings",
   "featureFlags",
