@@ -3,14 +3,12 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowUpIcon, ArrowDownIcon } from "lucide-react"
-
 import {
   publishProjectAction,
   archiveProjectAction,
   restoreProjectAction,
   deleteProjectAction,
-  reorderProjectAction,
+  reorderProjectsAction,
 } from "@/actions/projects"
 import type { InferredProjectInput } from "@/schemas/project.schema"
 import { DataTable, type DataTableColumn } from "@/components/admin/data-table"
@@ -59,12 +57,14 @@ function ProjectsTable({ rows, total, page, limit }: ProjectsTableProps) {
     router.refresh()
   }
 
-  async function handleReorder(id: string, direction: "up" | "down") {
-    const response = await reorderProjectAction(id, direction)
+  async function handleReorder(orderedIds: string[]) {
+    const response = await reorderProjectsAction(orderedIds)
     if (!response.success) {
       toast.error(response.error.message)
+      router.refresh()
       return
     }
+    toast.success("Order updated")
     router.refresh()
   }
 
@@ -127,6 +127,7 @@ function ProjectsTable({ rows, total, page, limit }: ProjectsTableProps) {
         basePath="/admin/projects"
         getRowId={(row) => row.id}
         searchPlaceholder="Search projects..."
+        onReorder={handleReorder}
         rowActions={(row) =>
           row.deletedAt ? (
             <Button
@@ -138,12 +139,6 @@ function ProjectsTable({ rows, total, page, limit }: ProjectsTableProps) {
             </Button>
           ) : (
             <>
-              <Button variant="ghost" size="icon-sm" onClick={() => handleReorder(row.id, "up")}>
-                <ArrowUpIcon />
-              </Button>
-              <Button variant="ghost" size="icon-sm" onClick={() => handleReorder(row.id, "down")}>
-                <ArrowDownIcon />
-              </Button>
               {row.status !== "published" && (
                 <Button
                   variant="outline"

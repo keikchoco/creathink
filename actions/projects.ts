@@ -8,6 +8,7 @@ import { projectRepository } from "@/repositories/project.repository"
 import { createAuditLog } from "@/lib/audit-log"
 import { ValidationError, formatZodError } from "@/lib/errors"
 import { successResponse, errorResponse } from "@/lib/api-response"
+import { applyReorder } from "@/lib/reorder"
 import { projectSchema } from "@/schemas/project.schema"
 import type { ApiResponse } from "@/types/api"
 
@@ -129,6 +130,38 @@ export async function restoreProjectAction(id: string): Promise<ApiResponse<null
     revalidatePath("/")
     revalidatePath("/portfolio")
     revalidatePath(`/portfolio/${project.slug}`)
+    return successResponse(null)
+  } catch (error) {
+    return errorResponse(error)
+  }
+}
+
+export async function reorderProjectsAction(ids: unknown): Promise<ApiResponse<null>> {
+  try {
+    const admin = await requirePermission("projects", "edit")
+
+    if (
+      !Array.isArray(ids) ||
+      ids.length === 0 ||
+      ids.some((id) => typeof id !== "string")
+    ) {
+      throw new ValidationError("Invalid order")
+    }
+
+    await applyReorder(projectRepository, ids as string[])
+
+    await createAuditLog({
+      userId: admin.userId,
+      action: "UPDATE",
+      resource: "projects",
+      resourceId: "reorder",
+      newValue: { ids },
+    })
+
+    revalidatePath("/admin/projects")
+    revalidatePath("/")
+    revalidatePath("/portfolio")
+
     return successResponse(null)
   } catch (error) {
     return errorResponse(error)

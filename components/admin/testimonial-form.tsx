@@ -5,15 +5,29 @@ import { useForm } from "@tanstack/react-form"
 import { toast } from "sonner"
 import { StarIcon } from "lucide-react"
 
-import { createTestimonialAction, updateTestimonialAction } from "@/actions/testimonials"
+import {
+  createTestimonialAction,
+  updateTestimonialAction,
+  generateTestimonialLinkAction,
+} from "@/actions/testimonials"
 import type { InferredTestimonialInput } from "@/schemas/testimonial.schema"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+} from "@/components/ui/combobox"
 import { FormField } from "@/components/forms/form-field"
 import { FormError } from "@/components/forms/form-error"
 import { SubmitButton } from "@/components/forms/submit-button"
 import { MediaPicker } from "@/components/admin/media-picker"
 import { cn } from "@/lib/utils"
+
+const REVIEW_MAX_LENGTH = 120
 
 const emptyTestimonial: InferredTestimonialInput = {
   clientName: "",
@@ -40,6 +54,12 @@ function TestimonialForm({
   onSuccess,
 }: TestimonialFormProps) {
   const [formError, setFormError] = React.useState<string | null>(null)
+  const [isGeneratingLink, setIsGeneratingLink] = React.useState(false)
+
+  const projectItems = React.useMemo(
+    () => [{ id: "", title: "None" }, ...projectOptions],
+    [projectOptions]
+  )
 
   const form = useForm({
     defaultValues: defaultValues ?? emptyTestimonial,
@@ -55,10 +75,47 @@ function TestimonialForm({
         return
       }
 
-      toast.success(testimonialId ? "Testimonial updated" : "Testimonial created")
+      toast.success(
+        testimonialId ? "Testimonial updated" : "Testimonial created"
+      )
       onSuccess?.()
     },
   })
+
+  async function generateTestimonialLink() {
+    setFormError(null)
+
+    const projectId = form.getFieldValue("projectId")
+    if (!projectId) {
+      setFormError(
+        "Select a related project before generating a testimonial link."
+      )
+      return
+    }
+
+    setIsGeneratingLink(true)
+    try {
+      const response = await generateTestimonialLinkAction(projectId)
+
+      if (!response.success) {
+        setFormError(response.error.message)
+        return
+      }
+
+      const link = `${window.location.origin}/testimonials/create?token=${response.data.token}`
+
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(link)
+        toast.success("Testimonial link copied to clipboard")
+      } else {
+        toast.success(`Testimonial link: ${link}`)
+      }
+
+      onSuccess?.()
+    } finally {
+      setIsGeneratingLink(false)
+    }
+  }
 
   return (
     <form
@@ -83,7 +140,7 @@ function TestimonialForm({
 
         <form.Field name="position">
           {(field) => (
-            <FormField label="Position" htmlFor="position" required>
+            <FormField label="Position" htmlFor="position" description="Optional">
               <Input
                 id="position"
                 value={field.state.value}
@@ -95,7 +152,12 @@ function TestimonialForm({
 
         <form.Field name="company">
           {(field) => (
-            <FormField label="Company" htmlFor="company" required>
+            <FormField
+              label="Company"
+              htmlFor="company"
+              description="Optional"
+              className="sm:col-span-2"
+            >
               <Input
                 id="company"
                 value={field.state.value}
@@ -107,12 +169,14 @@ function TestimonialForm({
 
         <form.Field name="order">
           {(field) => (
-            <FormField label="Order" htmlFor="order">
+            <FormField label="Order" htmlFor="order" className="hidden">
               <Input
                 id="order"
                 type="number"
                 value={field.state.value}
-                onChange={(event) => field.handleChange(Number(event.target.value))}
+                onChange={(event) =>
+                  field.handleChange(Number(event.target.value))
+                }
               />
             </FormField>
           )}
@@ -121,8 +185,15 @@ function TestimonialForm({
 
       <form.Field name="image">
         {(field) => (
-          <FormField label="Profile image" htmlFor="image" description="Optional — initials will be shown if left empty">
-            <MediaPicker value={field.state.value ?? ""} onSelect={field.handleChange} />
+          <FormField
+            label="Profile image"
+            htmlFor="image"
+            description="Optional — initials will be shown if left empty"
+          >
+            <MediaPicker
+              value={field.state.value ?? ""}
+              onSelect={field.handleChange}
+            />
           </FormField>
         )}
       </form.Field>
@@ -133,9 +204,15 @@ function TestimonialForm({
             <Textarea
               id="review"
               value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
+              onChange={(event) =>
+                field.handleChange(event.target.value.slice(0, REVIEW_MAX_LENGTH))
+              }
               rows={4}
+              maxLength={REVIEW_MAX_LENGTH}
             />
+            <span className="self-end text-xs text-muted-foreground">
+              {field.state.value.length}/{REVIEW_MAX_LENGTH}
+            </span>
           </FormField>
         )}
       </form.Field>
@@ -158,7 +235,7 @@ function TestimonialForm({
                       "size-5 transition-colors",
                       field.state.value >= value
                         ? "fill-primary text-primary"
-                        : "fill-none text-muted-foreground/40",
+                        : "fill-none text-muted-foreground/40"
                     )}
                   />
                 </button>
@@ -170,20 +247,32 @@ function TestimonialForm({
 
       <form.Field name="projectId">
         {(field) => (
-          <FormField label="Related project" htmlFor="projectId" description="Optional">
-            <select
-              id="projectId"
-              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-              value={field.state.value ?? ""}
-              onChange={(event) => field.handleChange(event.target.value || null)}
+          <FormField
+            label="Related project"
+            htmlFor="projectId"
+            description="Optional — required only when generating a testimonial link"
+          >
+            <Combobox
+              items={projectItems}
+              itemToStringLabel={(item) => item?.title ?? ""}
+              value={
+                projectItems.find((item) => item.id === field.state.value) ??
+                null
+              }
+              onValueChange={(item) => field.handleChange(item?.id || null)}
             >
-              <option value="">None</option>
-              {projectOptions.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
+              <ComboboxInput placeholder="Search projects..." id="projectId" />
+              <ComboboxContent>
+                <ComboboxEmpty>No projects found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(project: { id: string; title: string }) => (
+                    <ComboboxItem key={project.id} value={project}>
+                      {project.title}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </FormField>
         )}
       </form.Field>
@@ -192,9 +281,26 @@ function TestimonialForm({
 
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
-          <SubmitButton type="submit" isSubmitting={isSubmitting} className="self-start">
-            {testimonialId ? "Save changes" : "Create testimonial"}
-          </SubmitButton>
+          <div className="flex flex-col gap-2 md:flex-row">
+            <SubmitButton
+              type="submit"
+              isSubmitting={isSubmitting}
+              className="self-start"
+            >
+              {testimonialId ? "Save changes" : "Create testimonial"}
+            </SubmitButton>
+            {!testimonialId && (
+              <SubmitButton
+                type="button"
+                className="self-start"
+                isSubmitting={isGeneratingLink}
+                submittingLabel="Generating..."
+                onClick={() => generateTestimonialLink()}
+              >
+                Generate Testimonial Link
+              </SubmitButton>
+            )}
+          </div>
         )}
       </form.Subscribe>
     </form>

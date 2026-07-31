@@ -8,10 +8,17 @@ import { testimonialRepository } from "@/repositories/testimonial.repository"
 import { createAuditLog } from "@/lib/audit-log"
 import { ValidationError, formatZodError } from "@/lib/errors"
 import { successResponse, errorResponse } from "@/lib/api-response"
-import { testimonialSchema } from "@/schemas/testimonial.schema"
+import { isRateLimited } from "@/lib/rate-limit"
+import { applyReorder } from "@/lib/reorder"
+import {
+  testimonialSchema,
+  clientTestimonialSchema,
+} from "@/schemas/testimonial.schema"
 import type { ApiResponse } from "@/types/api"
 
-export async function createTestimonialAction(input: unknown): Promise<ApiResponse<{ id: string }>> {
+export async function createTestimonialAction(
+  input: unknown
+): Promise<ApiResponse<{ id: string }>> {
   try {
     const admin = await requirePermission("testimonials", "edit")
 
@@ -41,7 +48,7 @@ export async function createTestimonialAction(input: unknown): Promise<ApiRespon
 
 export async function updateTestimonialAction(
   id: string,
-  input: unknown,
+  input: unknown
 ): Promise<ApiResponse<{ id: string }>> {
   try {
     const admin = await requirePermission("testimonials", "edit")
@@ -70,7 +77,9 @@ export async function updateTestimonialAction(
   }
 }
 
-export async function publishTestimonialAction(id: string): Promise<ApiResponse<null>> {
+export async function publishTestimonialAction(
+  id: string
+): Promise<ApiResponse<null>> {
   try {
     const admin = await requirePermission("testimonials", "edit")
     await testimonialService.publish(id)
@@ -88,7 +97,9 @@ export async function publishTestimonialAction(id: string): Promise<ApiResponse<
   }
 }
 
-export async function archiveTestimonialAction(id: string): Promise<ApiResponse<null>> {
+export async function archiveTestimonialAction(
+  id: string
+): Promise<ApiResponse<null>> {
   try {
     const admin = await requirePermission("testimonials", "edit")
     await testimonialService.archive(id)
@@ -106,7 +117,9 @@ export async function archiveTestimonialAction(id: string): Promise<ApiResponse<
   }
 }
 
-export async function deleteTestimonialAction(id: string): Promise<ApiResponse<null>> {
+export async function deleteTestimonialAction(
+  id: string
+): Promise<ApiResponse<null>> {
   try {
     const admin = await requirePermission("testimonials", "edit")
     await testimonialService.remove(id)
@@ -124,9 +137,146 @@ export async function deleteTestimonialAction(id: string): Promise<ApiResponse<n
   }
 }
 
+export async function generateTestimonialLinkAction(
+  projectId: unknown
+): Promise<ApiResponse<{ token: string }>> {
+  try {
+    const admin = await requirePermission("testimonials", "edit")
+
+    if (typeof projectId !== "string" || projectId.length === 0) {
+      throw new ValidationError("A project is required to generate a testimonial link.")
+    }
+
+    const { token, id } = await testimonialService.createLink(projectId)
+
+    await createAuditLog({
+      userId: admin.userId,
+      action: "CREATE",
+      resource: "testimonials",
+      resourceId: id,
+      newValue: { projectId, linkStatus: "pending" },
+    })
+
+    revalidatePath("/admin/testimonials")
+
+    return successResponse({ token })
+  } catch (error) {
+    return errorResponse(error)
+  }
+}
+
+export async function submitClientTestimonialAction(
+  token: unknown,
+  formData: FormData
+): Promise<ApiResponse<null>> {
+  try {
+    if (typeof token !== "string" || token.length === 0) {
+      throw new ValidationError("This testimonial link is invalid.")
+    }
+
+    const parsed = clientTestimonialSchema.safeParse({
+      clientName: formData.get("clientName"),
+      position: formData.get("position") ?? "",
+      company: formData.get("company") ?? "",
+      review: formData.get("review"),
+      ratingQuality: formData.get("ratingQuality"),
+      ratingCommunication: formData.get("ratingCommunication"),
+      ratingValueForMoney: formData.get("ratingValueForMoney"),
+      website: formData.get("website") ?? "",
+    })
+    if (!parsed.success) {
+      throw new ValidationError(formatZodError(parsed.error))
+    }
+
+    if (parsed.data.website) {
+      return successResponse(null)
+    }
+
+    if (isRateLimited(`testimonial:${token}`)) {
+      throw new ValidationError("Too many submissions. Please try again later.")
+    }
+
+    const photo = formData.get("photo")
+
+    await testimonialService.submitByToken(
+      token,
+      parsed.data,
+      photo instanceof File ? photo : null
+    )
+
+    // No revalidatePath here: it would refresh the client's current route,
+    // replacing the form (and its success state) with the "link already used"
+    // page. The admin list is dynamically rendered and needs no invalidation.
+
+    return successResponse(null)
+  } catch (error) {
+    return errorResponse(error)
+  }
+}
+
+export async function setTestimonialImageHiddenAction(
+  id: string,
+  hidden: boolean
+): Promise<ApiResponse<null>> {
+  try {
+    const admin = await requirePermission("testimonials", "edit")
+
+    await testimonialService.setImageHidden(id, hidden === true)
+
+    await createAuditLog({
+      userId: admin.userId,
+      action: "UPDATE",
+      resource: "testimonials",
+      resourceId: id,
+      newValue: { imageHidden: hidden === true },
+    })
+
+    revalidatePath("/admin/testimonials")
+    revalidatePath("/")
+    revalidatePath("/testimonials")
+
+    return successResponse(null)
+  } catch (error) {
+    return errorResponse(error)
+  }
+}
+
+export async function reorderTestimonialsAction(
+  ids: unknown
+): Promise<ApiResponse<null>> {
+  try {
+    const admin = await requirePermission("testimonials", "edit")
+
+    if (
+      !Array.isArray(ids) ||
+      ids.length === 0 ||
+      ids.some((id) => typeof id !== "string")
+    ) {
+      throw new ValidationError("Invalid order")
+    }
+
+    await applyReorder(testimonialRepository, ids as string[])
+
+    await createAuditLog({
+      userId: admin.userId,
+      action: "UPDATE",
+      resource: "testimonials",
+      resourceId: "reorder",
+      newValue: { ids },
+    })
+
+    revalidatePath("/admin/testimonials")
+    revalidatePath("/")
+
+    return successResponse(null)
+  } catch (error) {
+    return errorResponse(error)
+  }
+}
+
 export async function reorderTestimonialAction(
   id: string,
-  direction: "up" | "down",
+  direction: "up" | "down"
 ): Promise<ApiResponse<null>> {
   try {
     const admin = await requirePermission("testimonials", "edit")
@@ -136,7 +286,10 @@ export async function reorderTestimonialAction(
     }
 
     const current = await testimonialService.getById(id)
-    const { items } = await testimonialRepository.findAll({}, { sort: "order", limit: 200 })
+    const { items } = await testimonialRepository.findAll(
+      {},
+      { sort: "order", limit: 200 }
+    )
     const index = items.findIndex((item) => String(item._id) === id)
 
     if (index === -1) {
@@ -151,7 +304,9 @@ export async function reorderTestimonialAction(
     }
 
     await testimonialRepository.update(id, { order: swapItem.order })
-    await testimonialRepository.update(String(swapItem._id), { order: current.order })
+    await testimonialRepository.update(String(swapItem._id), {
+      order: current.order,
+    })
 
     await createAuditLog({
       userId: admin.userId,

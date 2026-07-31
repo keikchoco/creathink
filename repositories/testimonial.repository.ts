@@ -35,6 +35,11 @@ async function findById(id: string): Promise<TestimonialDocument | null> {
   return Testimonial.findById(id)
 }
 
+async function findByLinkToken(token: string): Promise<TestimonialDocument | null> {
+  await connectToDatabase()
+  return Testimonial.findOne({ linkToken: token })
+}
+
 async function create(data: Partial<TestimonialDocument>): Promise<TestimonialDocument> {
   await connectToDatabase()
   return Testimonial.create(data)
@@ -64,6 +69,7 @@ async function hardDelete(id: string): Promise<void> {
 export const testimonialRepository = {
   findAll,
   findById,
+  findByLinkToken,
   create,
   update,
   setStatus,
