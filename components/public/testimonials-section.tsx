@@ -17,7 +17,9 @@ import { SlideUp } from "@/components/motion/slide-up"
 type TestimonialItem = Pick<
   Testimonial,
   "_id" | "clientName" | "position" | "company" | "image" | "review" | "rating"
->
+> & {
+  projectTitle?: string
+}
 
 interface TestimonialsSectionProps {
   testimonials: TestimonialItem[]
@@ -81,6 +83,11 @@ function TestimonialsSection({ testimonials, index, totalCount, viewAllHref }: T
                               {[testimonial.position, testimonial.company]
                                 .filter(Boolean)
                                 .join(", ")}
+                            </p>
+                          )}
+                          {testimonial.projectTitle && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {testimonial.projectTitle}
                             </p>
                           )}
                         </div>

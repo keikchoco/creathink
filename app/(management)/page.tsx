@@ -100,15 +100,24 @@ export default async function HomePage() {
 
       <TestimonialsSection
         index="05"
-        testimonials={testimonialsResult.items.map((testimonial) => ({
-          _id: String(testimonial._id),
-          clientName: testimonial.clientName,
-          position: testimonial.position,
-          company: testimonial.company,
-          image: testimonial.image,
-          review: testimonial.review,
-          rating: testimonial.rating,
-        }))}
+        testimonials={testimonialsResult.items.map((testimonial) => {
+          const project = testimonial.projectId
+            ? projectsResult.items.find(
+                (item) => String(item._id) === String(testimonial.projectId)
+              )
+            : undefined
+
+          return {
+            _id: String(testimonial._id),
+            clientName: testimonial.clientName,
+            position: testimonial.position,
+            company: testimonial.company,
+            image: testimonial.imageHidden ? "" : testimonial.image,
+            review: testimonial.review,
+            rating: testimonial.rating,
+            projectTitle: project?.title,
+          }
+        })}
         totalCount={testimonialsResult.total}
         viewAllHref={testimonialsResult.total > 6 ? "/testimonials" : undefined}
       />
