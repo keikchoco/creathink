@@ -17,8 +17,20 @@ import type {
 import { projectRepository } from "@/repositories/project.repository"
 
 function toRepositoryInput(input: InferredTestimonialInput) {
+  const { ratingQuality, ratingCommunication, ratingValueForMoney, ...rest } = input
+  const ratings = {
+    quality: ratingQuality,
+    communication: ratingCommunication,
+    valueForMoney: ratingValueForMoney,
+  }
+
   return {
-    ...input,
+    ...rest,
+    ratings,
+    rating:
+      Math.round(
+        ((ratings.quality + ratings.communication + ratings.valueForMoney) / 3) * 10
+      ) / 10,
     projectId: input.projectId ? new Types.ObjectId(input.projectId) : null,
   }
 }

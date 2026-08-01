@@ -8,7 +8,9 @@ export const testimonialSchema = z.object({
   company: z.string().max(200).optional().default(""),
   image: z.string().optional().default(""),
   review: z.string().min(1, "Review is required").max(120, "Review must be 120 characters or less"),
-  rating: z.coerce.number().int().min(1, "Rating must be at least 1").max(5, "Rating must be at most 5").default(5),
+  ratingQuality: z.coerce.number().int().min(1, "Rate the quality").max(5).default(5),
+  ratingCommunication: z.coerce.number().int().min(1, "Rate the communication").max(5).default(5),
+  ratingValueForMoney: z.coerce.number().int().min(1, "Rate the value for money").max(5).default(5),
   projectId: objectIdSchema.nullable().optional(),
   order: z.coerce.number().int().default(0),
 })

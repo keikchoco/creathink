@@ -3,7 +3,6 @@
 import * as React from "react"
 import { useForm } from "@tanstack/react-form"
 import { toast } from "sonner"
-import { StarIcon } from "lucide-react"
 
 import {
   createTestimonialAction,
@@ -25,7 +24,7 @@ import { FormField } from "@/components/forms/form-field"
 import { FormError } from "@/components/forms/form-error"
 import { SubmitButton } from "@/components/forms/submit-button"
 import { MediaPicker } from "@/components/admin/media-picker"
-import { cn } from "@/lib/utils"
+import { StarPicker } from "@/components/shared/star-picker"
 
 const REVIEW_MAX_LENGTH = 120
 
@@ -35,7 +34,9 @@ const emptyTestimonial: InferredTestimonialInput = {
   company: "",
   image: "",
   review: "",
-  rating: 5,
+  ratingQuality: 5,
+  ratingCommunication: 5,
+  ratingValueForMoney: 5,
   projectId: null,
   order: 0,
 }
@@ -217,33 +218,46 @@ function TestimonialForm({
         )}
       </form.Field>
 
-      <form.Field name="rating">
-        {(field) => (
-          <FormField label="Rating" htmlFor="rating" required>
-            <div className="flex items-center gap-1" id="rating">
-              {[1, 2, 3, 4, 5].map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-label={`Rate ${value} out of 5 stars`}
-                  aria-pressed={field.state.value >= value}
-                  onClick={() => field.handleChange(value)}
-                  className="p-0.5"
-                >
-                  <StarIcon
-                    className={cn(
-                      "size-5 transition-colors",
-                      field.state.value >= value
-                        ? "fill-primary text-primary"
-                        : "fill-none text-muted-foreground/40"
-                    )}
-                  />
-                </button>
-              ))}
-            </div>
-          </FormField>
-        )}
-      </form.Field>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <form.Field name="ratingQuality">
+          {(field) => (
+            <FormField label="Quality" htmlFor="ratingQuality" required>
+              <StarPicker
+                id="ratingQuality"
+                label="quality"
+                value={field.state.value}
+                onChange={field.handleChange}
+              />
+            </FormField>
+          )}
+        </form.Field>
+
+        <form.Field name="ratingCommunication">
+          {(field) => (
+            <FormField label="Communication" htmlFor="ratingCommunication" required>
+              <StarPicker
+                id="ratingCommunication"
+                label="communication"
+                value={field.state.value}
+                onChange={field.handleChange}
+              />
+            </FormField>
+          )}
+        </form.Field>
+
+        <form.Field name="ratingValueForMoney">
+          {(field) => (
+            <FormField label="Value for money" htmlFor="ratingValueForMoney" required>
+              <StarPicker
+                id="ratingValueForMoney"
+                label="value for money"
+                value={field.state.value}
+                onChange={field.handleChange}
+              />
+            </FormField>
+          )}
+        </form.Field>
+      </div>
 
       <form.Field name="projectId">
         {(field) => (

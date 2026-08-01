@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useForm } from "@tanstack/react-form"
-import { StarIcon, CheckCircle2Icon } from "lucide-react"
+import { CheckCircle2Icon } from "lucide-react"
 
 import { submitClientTestimonialAction } from "@/actions/testimonials"
 import { PhotoCropper, type PhotoCropperHandle } from "@/components/public/photo-cropper"
@@ -20,44 +20,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { FormField } from "@/components/forms/form-field"
 import { FormError } from "@/components/forms/form-error"
 import { SubmitButton } from "@/components/forms/submit-button"
-import { cn } from "@/lib/utils"
+import { StarPicker } from "@/components/shared/star-picker"
 
 const PHOTO_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
 const PHOTO_MAX_SIZE_BYTES = 5 * 1024 * 1024
 const REVIEW_MAX_LENGTH = 120
-
-interface StarPickerProps {
-  id: string
-  label: string
-  value: number
-  onChange: (value: number) => void
-}
-
-function StarPicker({ id, label, value, onChange }: StarPickerProps) {
-  return (
-    <div className="flex items-center gap-1" id={id}>
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          type="button"
-          aria-label={`Rate ${label} ${star} out of 5 stars`}
-          aria-pressed={value >= star}
-          onClick={() => onChange(star)}
-          className="p-0.5"
-        >
-          <StarIcon
-            className={cn(
-              "size-5 transition-colors",
-              value >= star
-                ? "fill-primary text-primary"
-                : "fill-none text-muted-foreground/40"
-            )}
-          />
-        </button>
-      ))}
-    </div>
-  )
-}
 
 interface ClientTestimonialFormProps {
   token: string

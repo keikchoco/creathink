@@ -19,6 +19,7 @@ import { FormDialog } from "@/components/admin/form-dialog"
 import { ConfirmDialog } from "@/components/admin/confirm-dialog"
 import { TestimonialForm } from "@/components/admin/testimonial-form"
 import { StarRating } from "@/components/shared/star-rating"
+import { TestimonialAvatar } from "@/components/shared/testimonial-avatar"
 
 export interface TestimonialRow {
   id: string
@@ -37,6 +38,7 @@ export interface TestimonialRow {
   imageHidden: boolean
   linkToken: string | null
   linkStatus: "pending" | "submitted" | null
+  submittedAt: string | null
   defaultValues: InferredTestimonialInput
 }
 
@@ -48,16 +50,31 @@ interface TestimonialsTableProps {
   projectOptions: { id: string; title: string }[]
 }
 
-function TestimonialsTable({ rows, total, page, limit, projectOptions }: TestimonialsTableProps) {
+function TestimonialsTable({
+  rows,
+  total,
+  page,
+  limit,
+  projectOptions,
+}: TestimonialsTableProps) {
   const router = useRouter()
-  const [editingRow, setEditingRow] = React.useState<TestimonialRow | null>(null)
-  const [deletingRow, setDeletingRow] = React.useState<TestimonialRow | null>(null)
+  const [editingRow, setEditingRow] = React.useState<TestimonialRow | null>(
+    null
+  )
+  const [viewingRow, setViewingRow] = React.useState<TestimonialRow | null>(
+    null
+  )
+  const [deletingRow, setDeletingRow] = React.useState<TestimonialRow | null>(
+    null
+  )
   const [isDeleting, setIsDeleting] = React.useState(false)
 
   async function runAction(
-    action: (id: string) => Promise<{ success: boolean; error?: { message: string } }>,
+    action: (
+      id: string
+    ) => Promise<{ success: boolean; error?: { message: string } }>,
     id: string,
-    successMessage: string,
+    successMessage: string
   ) {
     const response = await action(id)
     if (!response.success) {
@@ -106,6 +123,16 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
 
   const columns: DataTableColumn<TestimonialRow>[] = [
     {
+      key: "project",
+      label: "Project",
+      render: (row) => {
+        const project = projectOptions.find(
+          (project) => project.id === row.defaultValues.projectId
+        )
+        return project ? project.title : "—"
+      },
+    },
+    {
       key: "clientName",
       label: "Client",
       render: (row) => (
@@ -115,7 +142,9 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
           onClick={() => setEditingRow(row)}
         >
           {row.clientName || (
-            <span className="text-muted-foreground italic">Awaiting client</span>
+            <span className="text-muted-foreground italic">
+              Awaiting client
+            </span>
           )}
         </button>
       ),
@@ -129,14 +158,18 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
           <StarRating rating={row.rating} variant="value" />
           {row.ratings && (
             <span className="text-xs text-muted-foreground">
-              Quality {row.ratings.quality} · Comm. {row.ratings.communication} · Value{" "}
-              {row.ratings.valueForMoney}
+              Quality {row.ratings.quality} · Comm. {row.ratings.communication}{" "}
+              · Value {row.ratings.valueForMoney}
             </span>
           )}
         </div>
       ),
     },
-    { key: "status", label: "Status", render: (row) => <span className="capitalize">{row.status}</span> },
+    {
+      key: "status",
+      label: "Status",
+      render: (row) => <span className="capitalize">{row.status}</span>,
+    },
     // { key: "order", label: "Order", render: (row) => row.order },
   ]
 
@@ -154,15 +187,29 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
         onReorder={handleReorder}
         rowActions={(row) => (
           <>
+            {row.status !== "published" &&
+              row.linkStatus !== "pending" &&
+              (row.linkStatus === "submitted" || row.status === "archived") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewingRow(row)}
+                >
+                  View
+                </Button>
+              )}
             {row.image && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() =>
                   runAction(
-                    (id) => setTestimonialImageHiddenAction(id, !row.imageHidden),
+                    (id) =>
+                      setTestimonialImageHiddenAction(id, !row.imageHidden),
                     row.id,
-                    row.imageHidden ? "Photo is now visible" : "Photo is now hidden",
+                    row.imageHidden
+                      ? "Photo is now visible"
+                      : "Photo is now hidden"
                   )
                 }
               >
@@ -184,7 +231,13 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => runAction(publishTestimonialAction, row.id, "Testimonial published")}
+                onClick={() =>
+                  runAction(
+                    publishTestimonialAction,
+                    row.id,
+                    "Testimonial published"
+                  )
+                }
               >
                 Publish
               </Button>
@@ -193,20 +246,149 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => runAction(archiveTestimonialAction, row.id, "Testimonial archived")}
+                onClick={() =>
+                  runAction(
+                    archiveTestimonialAction,
+                    row.id,
+                    "Testimonial archived"
+                  )
+                }
               >
                 Archive
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => setEditingRow(row)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingRow(row)}
+            >
               Edit
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setDeletingRow(row)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeletingRow(row)}
+            >
               Delete
             </Button>
           </>
         )}
       />
+
+      <FormDialog
+        open={viewingRow !== null}
+        onOpenChange={(open) => !open && setViewingRow(null)}
+        title="Testimonial details"
+      >
+        {viewingRow && (
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-4">
+              <TestimonialAvatar
+                image={viewingRow.imageHidden ? "" : viewingRow.image}
+                name={viewingRow.defaultValues.clientName}
+                size={56}
+              />
+              <div className="flex flex-col">
+                <span className="font-medium">
+                  {viewingRow.defaultValues.clientName || "—"}
+                </span>
+                {(viewingRow.defaultValues.position ||
+                  viewingRow.defaultValues.company) && (
+                  <span className="text-sm text-muted-foreground">
+                    {[
+                      viewingRow.defaultValues.position,
+                      viewingRow.defaultValues.company,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </span>
+                )}
+                {viewingRow.image && viewingRow.imageHidden && (
+                  <span className="text-xs text-muted-foreground italic">
+                    Photo hidden from public display
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Rating</span>
+              <StarRating rating={viewingRow.rating} showValue />
+              {viewingRow.ratings && (
+                <span className="text-xs text-muted-foreground">
+                  Quality {viewingRow.ratings.quality} · Communication{" "}
+                  {viewingRow.ratings.communication} · Value for money{" "}
+                  {viewingRow.ratings.valueForMoney}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Review</span>
+              <p className="text-sm leading-relaxed whitespace-pre-line">
+                {viewingRow.defaultValues.review || "—"}
+              </p>
+            </div>
+
+            <div className="grid gap-3 text-sm sm:grid-cols-2">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">
+                  Related project
+                </span>
+                <span>
+                  {projectOptions.find(
+                    (project) =>
+                      project.id === viewingRow.defaultValues.projectId
+                  )?.title ?? "—"}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Status</span>
+                <span className="capitalize">{viewingRow.status}</span>
+              </div>
+              {viewingRow.submittedAt && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">
+                    Submitted by client
+                  </span>
+                  <span>
+                    {new Date(viewingRow.submittedAt).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 border-t pt-4">
+              {viewingRow.status !== "published" && (
+                <Button
+                  onClick={async () => {
+                    await runAction(
+                      publishTestimonialAction,
+                      viewingRow.id,
+                      "Testimonial published"
+                    )
+                    setViewingRow(null)
+                  }}
+                >
+                  Publish
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditingRow(viewingRow)
+                  setViewingRow(null)
+                }}
+              >
+                Edit
+              </Button>
+              <Button variant="ghost" onClick={() => setViewingRow(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </FormDialog>
 
       <FormDialog
         open={editingRow !== null}
@@ -230,7 +412,11 @@ function TestimonialsTable({ rows, total, page, limit, projectOptions }: Testimo
         open={deletingRow !== null}
         onOpenChange={(open) => !open && setDeletingRow(null)}
         title="Delete testimonial?"
-        description={deletingRow ? `Review from "${deletingRow.clientName}" will be removed.` : undefined}
+        description={
+          deletingRow
+            ? `Review from "${deletingRow.clientName}" will be removed.`
+            : undefined
+        }
         isConfirming={isDeleting}
         onConfirm={handleDeleteConfirm}
       />
