@@ -5,6 +5,7 @@ import { NextResponse } from "next/server"
 import { renderToBuffer } from "@react-pdf/renderer"
 
 import { invoiceService, effectiveStatus } from "@/services/invoice.service"
+import { paymentSettingsService } from "@/services/payment-settings.service"
 import { InvoicePdf } from "@/lib/invoice-pdf"
 
 async function loadLogo(): Promise<string | undefined> {
@@ -33,9 +34,15 @@ export async function GET(
       )
     }
 
+    const paymentMethods = await paymentSettingsService.listEnabled()
+
     const buffer = await renderToBuffer(
       InvoicePdf({
         logoSrc: await loadLogo(),
+        paymentMethods: paymentMethods.map((method) => ({
+          label: method.label,
+          details: method.details,
+        })),
         invoice: {
           invoiceNumber: invoice.invoiceNumber,
           customer: invoice.customer,

@@ -2,9 +2,10 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 import { invoiceService, effectiveStatus } from "@/services/invoice.service"
+import { paymentSettingsService } from "@/services/payment-settings.service"
 import { formatCurrency } from "@/lib/currency"
 import { SITE_NAME, SITE_URL, CONTACT_EMAIL } from "@/lib/site"
-import { InvoiceStatusBadge } from "@/components/admin/invoice-status-badge"
+import { InvoiceStatusBadge } from "@/components/public/invoice-status-badge"
 import { InvoiceViewActions } from "@/components/public/invoice-view-actions"
 
 export const metadata: Metadata = {
@@ -33,6 +34,8 @@ export default async function PublicInvoicePage({ params }: PublicInvoicePagePro
 
   const status = effectiveStatus(invoice)
   const balance = Math.max(0, invoice.total - invoice.totalPaid)
+  const showPaymentMethods = status !== "paid" && status !== "cancelled" && balance > 0
+  const paymentMethods = showPaymentMethods ? await paymentSettingsService.listEnabled() : []
 
   return (
     <div className="min-h-screen bg-muted/40 py-10 print:bg-white print:py-0">
@@ -174,6 +177,24 @@ export default async function PublicInvoicePage({ params }: PublicInvoicePagePro
               </>
             )}
           </div>
+
+          {paymentMethods.length > 0 && (
+            <div className="mt-8 rounded-lg border bg-muted/30 p-4">
+              <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                Payment Methods
+              </h3>
+              <div className="mt-2 flex flex-col gap-3">
+                {paymentMethods.map((method) => (
+                  <div key={String(method._id)} className="text-sm">
+                    <p className="font-medium">{method.label}</p>
+                    <p className="whitespace-pre-line text-muted-foreground">
+                      {method.details}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {invoice.notes && (
             <div className="mt-8">

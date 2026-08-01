@@ -4,6 +4,7 @@ import { randomBytes } from "crypto"
 import { invoiceRepository, type InvoiceFilter, type InvoiceListOptions } from "@/repositories/invoice.repository"
 import { invoiceItemLibraryRepository } from "@/repositories/invoice-item-library.repository"
 import { invoiceActivityRepository } from "@/repositories/invoice-activity.repository"
+import { paymentSettingsService } from "@/services/payment-settings.service"
 import { NotFoundError, ValidationError } from "@/lib/errors"
 import { sendEmail } from "@/lib/mailer"
 import { formatCurrency } from "@/lib/currency"
@@ -290,6 +291,7 @@ async function recordPayment(
     createdAt: new Date(),
   } as InvoicePayment)
 
+  const wasSent = invoice.sentAt !== null
   invoice.totalPaid = roundMoney(
     invoice.payments.reduce((sum, payment) => sum + payment.amount, 0)
   )
@@ -298,6 +300,19 @@ async function recordPayment(
   invoice.paidAt = nextStatus === "paid" ? (invoice.paidAt ?? new Date()) : null
   invoice.updatedBy = userId
   await invoice.save()
+
+  // Only notify the client automatically if they were actually sent this
+  // invoice before — a payment recorded against a draft has no one to email.
+  if (wasSent && invoice.customer.email) {
+    try {
+      await dispatchInvoiceEmail(invoice, invoiceEmailSubjectTag(effectiveStatus(invoice)))
+      invoice.lastSentAt = new Date()
+      invoice.sentCount += 1
+      await invoice.save()
+    } catch (error) {
+      console.error("[invoice] Failed to send payment-received email:", error)
+    }
+  }
 
   await invoiceActivityRepository.log({
     invoiceId: id,
@@ -387,22 +402,45 @@ async function deletePayment(
   return invoice
 }
 
-async function send(id: string, userId: string): Promise<InvoiceDocument> {
-  const invoice = await getById(id)
-
-  if (invoice.status === "cancelled") {
-    throw new ValidationError("Cannot send a cancelled invoice")
+/**
+ * Subject tag reflects the invoice's status at the moment of dispatch.
+ * Callers pass the status explicitly (rather than re-deriving it) so a
+ * payment-received notification always reads [PAYMENT RECEIVED]/[PAID], not
+ * whatever the invoice's status happened to be before this send.
+ */
+function invoiceEmailSubjectTag(status: InvoiceStatus): string {
+  switch (status) {
+    case "paid":
+      return "[PAID]"
+    case "partially_paid":
+      return "[PAYMENT RECEIVED]"
+    case "overdue":
+      return "[OVERDUE]"
+    case "cancelled":
+      return "[CANCELLED]"
+    case "sent":
+      return "[DUE]"
+    case "draft":
+    default:
+      return "[INVOICE]"
   }
+}
+
+async function dispatchInvoiceEmail(
+  invoice: InvoiceDocument,
+  subjectTag: string
+): Promise<void> {
   if (!invoice.customer.email) {
     throw new ValidationError("This invoice has no customer email address")
   }
 
   const publicUrl = `${SITE_URL}/invoice/${invoice.publicId}`
   const balance = roundMoney(invoice.total - invoice.totalPaid)
+  const paymentMethods = await paymentSettingsService.listEnabled()
 
   await sendEmail({
     to: invoice.customer.email,
-    subject: `Invoice ${invoice.invoiceNumber} from CreaThink`,
+    subject: `${subjectTag} Invoice ${invoice.invoiceNumber} from CreaThink`,
     react: InvoiceEmail({
       customerName: invoice.customer.name || "there",
       invoiceNumber: invoice.invoiceNumber,
@@ -415,8 +453,29 @@ async function send(id: string, userId: string): Promise<InvoiceDocument> {
           })
         : null,
       invoiceUrl: publicUrl,
+      items: invoice.items.map((item) => ({
+        name: item.name,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: formatCurrency(item.unitPrice, invoice.currency),
+        lineTotal: formatCurrency(item.quantity * item.unitPrice, invoice.currency),
+      })),
+      paymentMethods: paymentMethods.map((method) => ({
+        label: method.label,
+        details: method.details,
+      })),
     }),
   })
+}
+
+async function send(id: string, userId: string): Promise<InvoiceDocument> {
+  const invoice = await getById(id)
+
+  if (invoice.status === "cancelled") {
+    throw new ValidationError("Cannot send a cancelled invoice")
+  }
+
+  await dispatchInvoiceEmail(invoice, invoiceEmailSubjectTag(effectiveStatus(invoice)))
 
   const now = new Date()
   const updated = await invoiceRepository.update(id, {

@@ -42,6 +42,22 @@ export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   cancelled: "Cancelled",
 }
 
+/**
+ * Client-facing wording for the same underlying status. "Sent" is an
+ * internal/delivery term that reads oddly to the person who received the
+ * invoice — they see "Awaiting Payment" instead. The status itself (and
+ * every gating rule around it) is unchanged; this only affects labels shown
+ * on the public invoice page and PDF.
+ */
+export const INVOICE_CLIENT_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft: "Draft",
+  sent: "Awaiting Payment",
+  paid: "Paid",
+  partially_paid: "Partially Paid",
+  overdue: "Overdue",
+  cancelled: "Cancelled",
+}
+
 export type DiscountType = "fixed" | "percentage"
 
 export const INVOICE_ACTIVITY_TYPES = [

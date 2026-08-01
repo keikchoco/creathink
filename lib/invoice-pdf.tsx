@@ -4,7 +4,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 import { SITE_NAME, SITE_URL, CONTACT_EMAIL } from "@/lib/site"
 import type { InvoiceDocument } from "@/models/Invoice"
 import type { InvoiceCurrency, InvoiceStatus } from "@/types/invoice"
-import { INVOICE_STATUS_LABELS } from "@/types/invoice"
+import { INVOICE_CLIENT_STATUS_LABELS } from "@/types/invoice"
 
 // @react-pdf's built-in fonts don't include the peso glyph reliably, so we
 // format amounts with explicit currency codes instead of symbols.
@@ -85,6 +85,13 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     fontSize: 12,
   },
+  paymentMethods: {
+    marginBottom: 24,
+    padding: 12,
+    backgroundColor: "#fafafa",
+    borderRadius: 6,
+  },
+  paymentMethodRow: { marginTop: 6 },
   footer: {
     position: "absolute",
     bottom: 32,
@@ -118,10 +125,13 @@ interface InvoicePdfProps {
     | "notes"
   > & { status: InvoiceStatus }
   logoSrc?: string
+  paymentMethods?: { label: string; details: string }[]
 }
 
-export function InvoicePdf({ invoice, logoSrc }: InvoicePdfProps) {
+export function InvoicePdf({ invoice, logoSrc, paymentMethods = [] }: InvoicePdfProps) {
   const balance = Math.max(0, invoice.total - invoice.totalPaid)
+  const showPaymentMethods =
+    invoice.status !== "paid" && invoice.status !== "cancelled" && balance > 0
 
   return (
     <Document title={`Invoice ${invoice.invoiceNumber}`}>
@@ -147,7 +157,7 @@ export function InvoicePdf({ invoice, logoSrc }: InvoicePdfProps) {
             <Text style={styles.invoiceMeta}>
               {invoice.invoiceNumber}
               {"\n"}
-              Status: {INVOICE_STATUS_LABELS[invoice.status]}
+              Status: {INVOICE_CLIENT_STATUS_LABELS[invoice.status]}
             </Text>
           </View>
         </View>
@@ -232,6 +242,18 @@ export function InvoicePdf({ invoice, logoSrc }: InvoicePdfProps) {
             </>
           )}
         </View>
+
+        {showPaymentMethods && paymentMethods.length > 0 ? (
+          <View style={styles.paymentMethods}>
+            <Text style={styles.sectionLabel}>Payment Methods</Text>
+            {paymentMethods.map((method, index) => (
+              <View key={index} style={index > 0 ? styles.paymentMethodRow : undefined}>
+                <Text style={styles.bold}>{method.label}</Text>
+                <Text style={styles.muted}>{method.details}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         {invoice.notes ? (
           <View style={styles.section}>

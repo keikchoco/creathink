@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { PlusIcon } from "lucide-react"
+import { PlusIcon, WalletIcon } from "lucide-react"
 
 import { requirePermission } from "@/lib/permissions"
 import { invoiceService, effectiveStatus } from "@/services/invoice.service"
@@ -87,10 +87,16 @@ export default async function AdminInvoicesPage({ searchParams }: AdminInvoicesP
         <Typography as="h1" variant="h1">
           Invoices
         </Typography>
-        <Button render={<Link href="/admin/invoices/new" />}>
-          <PlusIcon />
-          New Invoice
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" render={<Link href="/admin/invoices/settings" />}>
+            <WalletIcon />
+            Payment Methods
+          </Button>
+          <Button render={<Link href="/admin/invoices/new" />}>
+            <PlusIcon />
+            New Invoice
+          </Button>
+        </div>
       </div>
 
       {loadFailed ? (

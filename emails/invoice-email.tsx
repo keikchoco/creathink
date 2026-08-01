@@ -2,6 +2,20 @@ import { Button, Heading, Section, Text } from "@react-email/components"
 
 import { EmailLayout } from "@/emails/components/email-layout"
 import { SummaryCard } from "@/emails/components/summary-card"
+import { InvoiceItemsTable } from "@/emails/components/invoice-items-table"
+
+interface InvoiceEmailPaymentMethod {
+  label: string
+  details: string
+}
+
+interface InvoiceEmailItem {
+  name: string
+  description?: string
+  quantity: number
+  unitPrice: string
+  lineTotal: string
+}
 
 interface InvoiceEmailProps {
   customerName: string
@@ -9,6 +23,8 @@ interface InvoiceEmailProps {
   amountDue: string
   dueDate: string | null
   invoiceUrl: string
+  items?: InvoiceEmailItem[]
+  paymentMethods?: InvoiceEmailPaymentMethod[]
 }
 
 function InvoiceEmail({
@@ -17,9 +33,15 @@ function InvoiceEmail({
   amountDue,
   dueDate,
   invoiceUrl,
+  items = [],
+  paymentMethods = [],
 }: InvoiceEmailProps) {
   return (
-    <EmailLayout previewText={`Invoice ${invoiceNumber} — ${amountDue} due`}>
+    <EmailLayout
+      previewText={`Invoice ${invoiceNumber} — ${amountDue} due${
+        items.length > 0 ? ` for ${items.length} item${items.length === 1 ? "" : "s"}` : ""
+      }`}
+    >
       <Heading className="m-0 mb-4 text-[18px] text-[#18181b]">
         Invoice {invoiceNumber}
       </Heading>
@@ -36,7 +58,10 @@ function InvoiceEmail({
           ...(dueDate ? [{ label: "Due date", value: dueDate }] : []),
         ]}
       />
-      <Section className="mt-6 text-center">
+
+      {items.length > 0 && <InvoiceItemsTable items={items} />}
+
+      <Section className="mt-6 mb-6 text-center">
         <Button
           href={invoiceUrl}
           className="rounded-lg bg-[#0d0f0c] px-6 py-3 text-[14px] font-semibold text-white"
@@ -44,6 +69,17 @@ function InvoiceEmail({
           View Invoice
         </Button>
       </Section>
+
+      {paymentMethods.length > 0 && (
+        <SummaryCard
+          title="Payment methods"
+          rows={paymentMethods.map((method) => ({
+            label: method.label,
+            value: method.details,
+          }))}
+        />
+      )}
+
       <Text className="m-0 mt-6 text-[13px] text-[#71717a]">
         If the button doesn&apos;t work, copy and paste this link into your
         browser: {invoiceUrl}
