@@ -439,6 +439,7 @@ async function dispatchInvoiceEmail(
   const paymentMethods = await paymentSettingsService.listEnabled()
 
   await sendEmail({
+    from: "billing@creathink.xyz",
     to: invoice.customer.email,
     subject: `${subjectTag} Invoice ${invoice.invoiceNumber} from CreaThink`,
     react: InvoiceEmail({

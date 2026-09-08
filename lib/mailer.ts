@@ -17,13 +17,14 @@ function getClient(): Resend | null {
 }
 
 interface SendEmailInput {
+  from?: string
   to: string
   cc?: string | string[]
   subject: string
   react: ReactElement
 }
 
-export async function sendEmail({ to, cc, subject, react }: SendEmailInput): Promise<void> {
+export async function sendEmail({ from, to, cc, subject, react }: SendEmailInput): Promise<void> {
   const client = getClient()
 
   if (!client) {
@@ -32,7 +33,11 @@ export async function sendEmail({ to, cc, subject, react }: SendEmailInput): Pro
   }
 
   try {
-    await client.emails.send({ from: FROM_EMAIL, to, cc, subject, react })
+    let fromAddress = from || FROM_EMAIL
+    if (from) {
+      fromAddress = from.includes("<") ? from : `${SITE_NAME} <${from}>`
+    }
+    await client.emails.send({ from: fromAddress, to, cc, subject, react })
   } catch (error) {
     console.error("[mailer] Failed to send email:", error)
   }
