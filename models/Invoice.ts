@@ -97,7 +97,7 @@ const invoiceSchema = new Schema<InvoiceDocument>(
       billingAddress: { type: String, default: "" },
     },
     items: { type: [lineItemSchema], required: true },
-    currency: { type: String, enum: ["PHP", "USD"], required: true },
+    currency: { type: String, enum: ["PHP", "USD", "AUD"], required: true },
     discountType: { type: String, enum: ["fixed", "percentage", null], default: null },
     discountValue: { type: Number, default: 0, min: 0 },
     subtotal: { type: Number, required: true, min: 0 },

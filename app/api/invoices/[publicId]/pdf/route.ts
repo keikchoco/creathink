@@ -19,6 +19,17 @@ async function loadLogo(): Promise<string | undefined> {
   }
 }
 
+async function loadLetterhead(): Promise<string | undefined> {
+  try {
+    const file = await readFile(
+      path.join(process.cwd(), "public", "assets", "Letterhead.png")
+    )
+    return `data:image/png;base64,${file.toString("base64")}`
+  } catch {
+    return undefined
+  }
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ publicId: string }> }
@@ -43,6 +54,7 @@ export async function GET(
           label: method.label,
           details: method.details,
         })),
+        letterheadSrc: await loadLetterhead(),
         invoice: {
           invoiceNumber: invoice.invoiceNumber,
           customer: invoice.customer,

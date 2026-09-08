@@ -25,7 +25,22 @@ function formatDate(value: Date | string | null): string {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 48, fontSize: 10, fontFamily: "Helvetica", color: "#18181b" },
+  page: {
+    position: "relative",
+    paddingTop: 125,
+    paddingHorizontal: 48,
+    paddingBottom: 90,
+    fontSize: 10,
+    fontFamily: "Helvetica",
+    color: "#18181b",
+  },
+  letterheadBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 596,
+    height: 842,
+  },
   logoChip: {
     backgroundColor: "#0d0f0c",
     borderRadius: 8,
@@ -42,7 +57,7 @@ const styles = StyleSheet.create({
   brand: { fontSize: 20, fontFamily: "Helvetica-Bold" },
   brandMeta: { marginTop: 4, color: "#52525b", lineHeight: 1.5 },
   invoiceTitle: { fontSize: 14, fontFamily: "Helvetica-Bold", textAlign: "right" },
-  invoiceMeta: { marginTop: 4, color: "#52525b", textAlign: "right", lineHeight: 1.5 },
+  invoiceMeta: { marginTop: 4, color: "#52525b", textAlign: "left", lineHeight: 1.5 },
   section: { marginBottom: 24 },
   sectionLabel: {
     fontSize: 8,
@@ -125,10 +140,11 @@ interface InvoicePdfProps {
     | "notes"
   > & { status: InvoiceStatus }
   logoSrc?: string
+  letterheadSrc?: string
   paymentMethods?: { label: string; details: string }[]
 }
 
-export function InvoicePdf({ invoice, logoSrc, paymentMethods = [] }: InvoicePdfProps) {
+export function InvoicePdf({ invoice, logoSrc, letterheadSrc, paymentMethods = [] }: InvoicePdfProps) {
   const balance = Math.max(0, invoice.total - invoice.totalPaid)
   const showPaymentMethods =
     invoice.status !== "paid" && invoice.status !== "cancelled" && balance > 0
@@ -136,22 +152,19 @@ export function InvoicePdf({ invoice, logoSrc, paymentMethods = [] }: InvoicePdf
   return (
     <Document title={`Invoice ${invoice.invoiceNumber}`}>
       <Page size="A4" style={styles.page}>
+        {letterheadSrc && (
+          <Image style={styles.letterheadBackground} src={letterheadSrc} fixed/>
+        )}
         <View style={styles.headerRow}>
-          <View>
-            {logoSrc ? (
-              <View style={styles.logoChip}>
-                {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf Image has no alt prop */}
-                <Image style={styles.logoImage} src={logoSrc} />
-              </View>
-            ) : (
-              <Text style={styles.brand}>{SITE_NAME}</Text>
-            )}
-            <Text style={styles.brandMeta}>
-              {SITE_URL.replace(/^https?:\/\//, "")}
-              {"\n"}
-              {CONTACT_EMAIL}
+          {/* <View style={{ maxWidth: 260 }}>
+            <Text style={styles.sectionLabel}>Billed To</Text>
+            <Text style={styles.bold}>{invoice.customer.name || "—"}</Text>
+            <Text style={styles.muted}>
+              {invoice.customer.email}
+              {invoice.customer.company ? `\n${invoice.customer.company}` : ""}
+              {invoice.customer.billingAddress ? `\n${invoice.customer.billingAddress}` : ""}
             </Text>
-          </View>
+          </View> */}
           <View>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
             <Text style={styles.invoiceMeta}>
@@ -262,9 +275,6 @@ export function InvoicePdf({ invoice, logoSrc, paymentMethods = [] }: InvoicePdf
           </View>
         ) : null}
 
-        <Text style={styles.footer}>
-          Thank you for your business. {SITE_NAME} · {SITE_URL.replace(/^https?:\/\//, "")}
-        </Text>
       </Page>
     </Document>
   )

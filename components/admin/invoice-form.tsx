@@ -260,6 +260,7 @@ function InvoiceForm({ invoiceId, defaultValues }: InvoiceFormProps) {
                 <SelectContent>
                   <SelectItem value="PHP">PHP (₱)</SelectItem>
                   <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="AUD">AUD ($)</SelectItem>
                 </SelectContent>
               </Select>
             </FormField>

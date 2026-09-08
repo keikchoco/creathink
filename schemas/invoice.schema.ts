@@ -26,7 +26,7 @@ export const invoiceSchema = z
       billingAddress: z.string().max(1000).optional().default(""),
     }),
     items: z.array(invoiceItemSchema).min(1, "At least one invoice item is required"),
-    currency: z.enum(["PHP", "USD"]),
+    currency: z.enum(["PHP", "USD", "AUD"], "Invalid currency"),
     discountType: z.enum(["fixed", "percentage"]).nullable().default(null),
     discountValue: z.coerce.number().min(0, "Discount cannot be negative").default(0),
     dueDate: z.string().optional().default(""),

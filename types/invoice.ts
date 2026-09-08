@@ -9,7 +9,7 @@ export const INVOICE_STATUSES = [
 
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number]
 
-export const INVOICE_CURRENCIES = ["PHP", "USD"] as const
+export const INVOICE_CURRENCIES = ["PHP", "USD", "AUD"] as const
 
 export type InvoiceCurrency = (typeof INVOICE_CURRENCIES)[number]
 
