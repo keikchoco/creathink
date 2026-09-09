@@ -15,6 +15,7 @@ export type InvoiceCurrency = (typeof INVOICE_CURRENCIES)[number]
 
 export const PAYMENT_METHODS = [
   "bank_transfer",
+  "wise",
   "gcash",
   "paypal",
   "cash",
@@ -26,6 +27,7 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   bank_transfer: "Bank Transfer",
+  wise: "Wise",
   gcash: "GCash",
   paypal: "PayPal",
   cash: "Cash",

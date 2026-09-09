@@ -72,7 +72,7 @@ export type InferredInvoiceItemInput = z.infer<typeof invoiceItemSchema>
 export const invoicePaymentSchema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0"),
   paymentDate: z.string().min(1, "Payment date is required"),
-  method: z.enum(["bank_transfer", "gcash", "paypal", "cash", "credit_card", "other"]),
+  method: z.enum(["bank_transfer", "wise", "gcash", "paypal", "cash", "credit_card", "other"]),
   reference: z.string().max(200).optional().default(""),
   notes: z.string().max(1000).optional().default(""),
 })

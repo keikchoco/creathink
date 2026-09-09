@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button"
 function InvoiceViewActions({ publicId }: { publicId: string }) {
   return (
     <div className="flex gap-2 print:hidden">
-      <Button variant="outline" onClick={() => window.print()}>
+      {/* <Button variant="outline" onClick={() => window.print()}>
         <PrinterIcon />
         Print
-      </Button>
+      </Button> */}
       <Button
         render={
           <a href={`/api/invoices/${publicId}/pdf`} target="_blank" rel="noreferrer" />

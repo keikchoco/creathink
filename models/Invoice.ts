@@ -75,7 +75,7 @@ const paymentSchema = new Schema<InvoicePayment>(
     paymentDate: { type: Date, required: true },
     method: {
       type: String,
-      enum: ["bank_transfer", "gcash", "paypal", "cash", "credit_card", "other"],
+      enum: ["bank_transfer", "wise", "gcash", "paypal", "cash", "credit_card", "other"],
       required: true,
     },
     reference: { type: String, default: "" },
